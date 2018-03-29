@@ -53,6 +53,11 @@ form = '1/f';
 %--------------------------------------------------------------------------
 Gu    = zeros(nw,nu,nu);
 Gn    = zeros(nw,nn,nn);
+%added by liu
+Gw    = zeros(nw,nn,nn);
+%added by liu end
+
+% Gu = C*PSD(U)*C^*
 if any(any(P.C))
     for i = 1:nu
         for j = 1:nu
@@ -63,7 +68,8 @@ if any(any(P.C))
     end
 end
 
-% neuronal fluctuations (Gu) (1/f or AR(1) form)
+% neuronal fluctuations induced by input (Gu) by (1/f or AR(1) form)
+% Gu=Gu+a(1,1)*w^-a(2,1)
 %--------------------------------------------------------------------------
 for i = 1:nu
     if strcmp(form,'1/f')
@@ -72,6 +78,17 @@ for i = 1:nu
         G     = spm_mar2csd(exp(P.a(2,1))/2,w);
     end
     Gu(:,i,i) = Gu(:,i,i) + exp(P.a(1,1))*G/sum(G);
+end
+% 
+% %  endogenous neuronal fluctuations (added by liu) (1/f or AR(1) form)
+% %--------------------------------------------------------------------------
+for i = 1:nn
+    if strcmp(form,'1/f')
+        G     = w.^(-exp(P.c(2,i))/2);
+    else
+        G     = spm_mar2csd(exp(P.c(2,i))/2,w);
+    end
+    Gw(:,i,i) = Gw(:,i,i) + exp(P.c(1,i))*G/sum(G);
 end
 
 % region specific observation noise (1/f or AR(1) form)
@@ -109,8 +126,11 @@ S     = spm_dcm_mtf(P,M);
 % predicted cross-spectral density
 %--------------------------------------------------------------------------
 G     = zeros(nw,nn,nn);
+
+Gi=Gu+Gw;
+% Gi=Gu;
 for i = 1:nw
-    G(i,:,:) = reshape(S(i,:,:),nn,nn)*reshape(Gu(i,:,:),nn,nn)*reshape(S(i,:,:),nn,nn)';
+    G(i,:,:) = reshape(S(i,:,:),nn,nn)*reshape(Gi(i,:,:),nn,nn)*reshape(S(i,:,:),nn,nn)';
 end
 
 
